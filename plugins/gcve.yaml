@@ -1,0 +1,105 @@
+# Plugin Info
+version: 0.0.1
+title: Google VMware Engine
+description: Log parser for Google VMware Engine
+min_stanza_version: 0.13.16
+parameters:
+  - name: listen_address
+    label: Listen Address
+    description: A network address of the form `<ip>:<port>`
+    type: string
+    default: "0.0.0.0:5140"
+  - name: max_buffer_size
+    label: Max Buffer Size
+    description: Maximum size of buffer that may be allocated while reading TCP input
+    type: string
+    default: "1024kib"
+    required: false
+  - name: enable_tls
+    label: Enable TLS
+    description: Enable TLS for the TCP listener
+    type: bool
+    default: false
+  - name: certificate_file
+    label: TLS certificate path
+    description: File path for the X509 TLS certificate chain
+    type: string
+    default: "/opt/cert"
+    required: true
+    relevant_if:
+      enable_tls:
+        equals: true
+  - name: private_key_file
+    label: TLS private key path
+    description: File path for the X509 TLS certificate chain
+    type: string
+    default: "/opt/key"
+    required: true
+    relevant_if:
+      enable_tls:
+        equals: true
+
+# Set Defaults
+# {{$listen_address := default "0.0.0.0:5140" .listen_address}}
+# {{$max_buffer_size := default "1024kib" .max_buffer_size}}
+# {{$enable_tls := default true .enable_tls}}
+# {{$certificate_file := default "" .certificate_file}}
+# {{$private_key_file := default "" .private_key_file}}
+
+# Pipeline Template
+pipeline:
+  - id: gcve_input
+    type: tcp_input
+    listen_address: {{ $listen_address }}
+    max_buffer_size: {{ $max_buffer_size }}
+    labels:
+      log_type: gcve.syslog
+      plugin_id: {{ .id }}
+    tls:
+      enable: {{ $enable_tls }}
+      certificate: {{ $certificate_file }}
+      private_key: {{ $private_key_file }}
+    output: gcve_json_parser
+  
+  - id: gcve_json_parser
+    type: json_parser
+    parse_from: $record
+    severity:
+      parse_from: '$record["@fields.severity"]'
+    timestamp:
+      layout: "2006-01-02T15:04:05.000000-07:00"
+      layout_type: gotime
+      parse_from: '@timestamp'
+    output: gcve_restructure
+
+  - id: gcve_restructure
+    type: restructure
+    ops:
+    - move:
+        from: '$record["@version"]'
+        to: "$record.version"
+    - move:
+        from: '$record["@fields.host"]'
+        to: '$record.host'
+    - move:
+        from: '$record["@fields.facility"]'
+        to: '$record.facility'
+    - move:
+        from: '$record["@fields.procid"]'
+        to: '$record.procid'
+    - move:
+        from: '$record["@fields.privatecloud_id"]'
+        to: '$record.privatecloud_id'
+    - move:
+        from: '$record["@fields.privatecloud_name"]'
+        to: '$record.privatecloud_name'
+    - move:
+        from: '$record["@fields.alias"]'
+        to: '$record.alias'
+    - move:
+        from: '$record["@fields.company_name"]'
+        to: '$record.company_name'
+    - move:
+        from: '$record["@fields.region_id"]'
+        to: '$record.region_id'
+    output: {{.output}}
