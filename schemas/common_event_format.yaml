@@ -1,0 +1,45 @@
+version: str()
+title: str()
+description: str()
+parameters: list(include('parameter'))
+pipeline: list(include('operator'))
+---
+parameter:
+  name: str()
+  label: str()
+  description: str()
+  type: str()
+  valid_values: list(required=False)
+
+operator:
+  id: str(required=False)
+  type: str()
+  include: list(required=False)
+  start_at: str(required=False)
+  labels: map(str(), required=False)
+  output: str(required=False) 
+  regex: str(required=False)
+  timestamp: map(include('timestamp_list'), str(), map(), required=False)
+  severity: map(include('severity_list'), str(), map(), required=False)
+
+timestamp_list:
+  parse_from: str()
+  layout: str()
+
+severity_list:
+  parse_from: str()
+  preset: str(required=False)
+  mapping: list(include('mapping_list'), str(), required=False)
+  preserve_to: str(required=False)
+  if: str(required=False)
+
+mapping_list:
+  info: str(required=False)
+  error: str(required=False)
+  warning: str(required=False)
+  critical: str(required=False)
+  debug: str(required=False)
+  trace: str(required=False)
+  alert: str(required=False)
+  emergency: str(required=False)
+  catastrophe: str(required=False)

@@ -1,0 +1,5 @@
+pipeline:
+- type: common_event_format
+  file_log_path: 
+    - "/var/log/cef.log"
+- type: stdout

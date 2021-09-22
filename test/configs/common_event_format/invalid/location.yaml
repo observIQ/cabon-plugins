@@ -1,0 +1,6 @@
+pipeline:
+- type: common_event_format
+  file_log_path: 
+    - "/var/log/json.log"
+  location: nowhere
+- type: stdout
