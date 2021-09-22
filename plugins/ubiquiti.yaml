@@ -49,12 +49,14 @@ pipeline:
   
   - id: device_router
     type: router
-    default: catch_all_parser
+    default: {{.output}}
     routes:
-      - expr: '$record matches "^<\\d+>\\w{3}\\s*\\d{1,2}\\s*\\d{2}:\\d{2}:\\d{2}"'
+      - expr: '$record matches "^<\\d+>\\w{3}\\s*\\d{1,2}\\s*\\d{2}:\\d{2}:\\d{2}\\s*[^,]*,[^:]*:(\\s*)?[^:]*(\\s*)?:[\\s\\S]*"'
         output: ac_lite_ap_parser
       - expr: '$record matches "^<[^>]+>[^ ]*\\s*[^,]*,[^,]*,[^:]*:(\\s*)?[^:]*:(\\s*)?[\\s\\S]*"'
         output: flex_mini_parser
+      - expr: '$record matches "^<\\d+>[\\s\\S]*"'
+        output: catch_all_parser
 
   # This pattern is known to match AC Lite access points
   - id: ac_lite_ap_parser
@@ -72,9 +74,11 @@ pipeline:
     type: regex_parser
     regex: '^<(?P<priority>[^>]+)>(?P<name>[^ ]*)\s*(?P<device>[^,]*),(?P<mac_address>[^,]*),(?P<firmware_version>[^:]*):(\s*)?(?P<service>[^:]*):(\s*)?(?P<message>[\s\S]*)'
     output: promote_name
+
   # promote name field to resource. name is specific to flex_mini_parser.
   - id: promote_name
     type: move
+    if: '$record.name != nil'
     from: $record.name
     to: '$resource["name"]'
     output: promote_device
@@ -82,6 +86,7 @@ pipeline:
   # promote device field to resource
   - id: promote_device
     type: move
+    if: '$record.device != nil'
     from: $record.device
     to: '$resource["device"]'
     output: severity_parser
@@ -94,6 +99,7 @@ pipeline:
     output: severity_parser
 
   - type: severity_parser
+    if: '$record.priority != nil'
     parse_from: $record.priority
     preserve_to: $record.priority
     mapping:
